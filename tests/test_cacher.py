@@ -1,6 +1,5 @@
 import asyncio
 import inspect
-from functools import partial
 from unittest import TestCase
 from unittest.mock import create_autospec, MagicMock
 
@@ -172,6 +171,33 @@ class TestCacher(TestCase):
         self.assertEqual(2, bar.call_count)
         self.assertEqual({}, self.cache)
         self.assertNotEqual({}, data)
+
+    def test_multiple_functions_get_different_caches(self):
+        caches = []
+
+        def create_cache():
+            c = {}
+            cache = create_autospec(Cache)
+            cache.get = MagicMock(wraps=c.get)
+            cache.set = MagicMock(wraps=lambda k, v: c.update({k: v}))
+            caches.append(c)
+            return cache
+        cacher = Cacher(create_cache)
+
+        @cacher.cached
+        def foo(x):
+            return x
+
+        @cacher.cached
+        def bar(x):
+            return x
+
+        foo(1)
+        bar(2)
+        self.assertEqual(2, len(caches))
+        self.assertEqual(1, len(caches[0]))
+        self.assertEqual(1, len(caches[1]))
+        self.assertEqual(2, len(set(caches[0].keys()).union(caches[1].keys())))
 
     @classmethod
     def _create_cacher(cls, cache: dict):
