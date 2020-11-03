@@ -1,13 +1,14 @@
 from functools import partial, wraps
 from inspect import getsource, iscoroutinefunction, getfullargspec
-from typing import Optional, Tuple, Callable, Any, Dict, List
+from typing import Optional, Callable, Any, Dict, List
 
 from thornfield.caches.cache import Cache
+from thornfield.errors import CachingError
 from thornfield.typing import NotCached, Cached
 
 
 class Cacher:
-    def __init__(self, cache_impl: Callable[[], Cache]) -> None:
+    def __init__(self, cache_impl: Optional[Callable[[], Cache]]) -> None:
         super().__init__()
         self._cache_impl = cache_impl
 
@@ -17,6 +18,9 @@ class Cacher:
         return partial(self._cached, cache=cache, validator=validator)
 
     def _cached(self, func: Callable, cache: Optional[Cache], validator: Optional[Callable[[Any], bool]]):
+        if cache is None and self._cache_impl is None:
+            raise CachingError('No cache and no cache creator provided.')
+
         spec = getfullargspec(func)
         func_args = spec.args
         func_annotations = spec.annotations

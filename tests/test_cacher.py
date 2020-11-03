@@ -5,6 +5,7 @@ from unittest.mock import create_autospec, MagicMock
 
 from thornfield.cacher import Cacher
 from thornfield.caches.cache import Cache
+from thornfield.errors import CachingError
 from thornfield.typing import Cached, NotCached
 
 
@@ -155,7 +156,7 @@ class TestCacher(TestCase):
             def get(self, key):
                 return data.get(key)
 
-            def set(self, key, value):
+            def set(self, key, value, expiration=0, overwrite=True):
                 data[key] = value
 
         @self.cacher.cached(CustomCache())
@@ -198,6 +199,32 @@ class TestCacher(TestCase):
         self.assertEqual(1, len(caches[0]))
         self.assertEqual(1, len(caches[1]))
         self.assertEqual(2, len(set(caches[0].keys()).union(caches[1].keys())))
+
+    def test_cacher_allows_creation_without_cache_creator_if_cache_supplied(self):
+        class CustomCache(Cache):
+            data = {}
+
+            def get(self, key):
+                return self.data.get(key)
+
+            def set(self, key, value, expiration=0, overwrite=True):
+                self.data[key] = value
+
+        cacher = Cacher(None)
+
+        @cacher.cached(CustomCache())
+        def foo(x):
+            return x
+
+        foo(1)
+
+    def test_cacher_errors_on_creation_without_cache_creator_and_without_cache(self):
+        cacher = Cacher(None)
+
+        def foo(x):
+            return x
+
+        self.assertRaises(CachingError, cacher.cached, foo)
 
     @classmethod
     def _create_cacher(cls, cache: dict):
