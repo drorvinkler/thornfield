@@ -156,7 +156,7 @@ class TestCacher(TestCase):
             def get(self, key):
                 return data.get(key)
 
-            def set(self, key, value, expiration=0, overwrite=True):
+            def set(self, key, value):
                 data[key] = value
 
         @self.cacher.cached(CustomCache())
@@ -207,7 +207,7 @@ class TestCacher(TestCase):
             def get(self, key):
                 return self.data.get(key)
 
-            def set(self, key, value, expiration=0, overwrite=True):
+            def set(self, key, value):
                 self.data[key] = value
 
         cacher = Cacher(None)
