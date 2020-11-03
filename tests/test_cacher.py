@@ -176,7 +176,7 @@ class TestCacher(TestCase):
     def test_multiple_functions_get_different_caches(self):
         caches = []
 
-        def create_cache():
+        def create_cache(_):
             c = {}
             cache = create_autospec(Cache)
             cache.get = MagicMock(wraps=c.get)
@@ -226,12 +226,48 @@ class TestCacher(TestCase):
 
         self.assertRaises(CachingError, cacher.cached, foo)
 
+    def test_cacher_passes_func_to_cache_creator(self):
+        def create_cache(func):
+            create_cache.func = func
+            cache = create_autospec(Cache)
+            cache.get = MagicMock(ret_val=None)
+            cache.set = MagicMock(ret_val=None)
+            return cache
+
+        cacher = Cacher(create_cache)
+
+        @cacher.cached
+        def foo(x):
+            return x
+
+        foo(1)
+        self.assertEqual(foo.__wrapped__, create_cache.func)
+
+    def test_cacher_passes_method_to_cacher_creator(self):
+        def create_cache(func):
+            create_cache.func = func
+            cache = create_autospec(Cache)
+            cache.get = MagicMock(ret_val=None)
+            cache.set = MagicMock(ret_val=None)
+            return cache
+
+        cacher = Cacher(create_cache)
+
+        class Foo:
+            @cacher.cached
+            def bar(self, x):
+                return x
+
+        foo = Foo()
+        foo.bar(1)
+        self.assertEqual(foo.bar, create_cache.func)
+
     @classmethod
     def _create_cacher(cls, cache: dict):
         get_func = cache.get
         set_func = lambda k, v: cache.update({k: v})
 
-        def create_cache():
+        def create_cache(_):
             cache = create_autospec(Cache)
             cache.get = MagicMock(wraps=get_func)
             cache.set = MagicMock(wraps=set_func)

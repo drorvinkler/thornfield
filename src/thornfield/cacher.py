@@ -8,7 +8,7 @@ from thornfield.typing import NotCached, Cached
 
 
 class Cacher:
-    def __init__(self, cache_impl: Optional[Callable[[], Cache]]) -> None:
+    def __init__(self, cache_impl: Optional[Callable[[Callable], Cache]]) -> None:
         super().__init__()
         self._cache_impl = cache_impl
 
@@ -30,15 +30,16 @@ class Cacher:
             func_defaults = {}
 
         def _x(*args, **kwargs):
-            instance_func = args and hasattr(args[0], func.__name__)
-            key = self._get_key(instance_func, func_args, args, kwargs, func_defaults, func_annotations)
+            is_instance_func = args and hasattr(args[0], func.__name__)
+            key = self._get_key(is_instance_func, func_args, args, kwargs, func_defaults, func_annotations)
             if not hasattr(func, '_cache'):
-                func._cache = cache if cache is not None else self._cache_impl()
-            result = func._cache.get(key)
+                real_func = getattr(args[0], func.__name__) if is_instance_func else func
+                func.cache = cache if cache is not None else self._cache_impl(real_func)
+            result = func.cache.get(key)
             if result is None:
                 result = func(*args, **kwargs)
                 if validator is None or validator(result):
-                    func._cache.set(key, result)
+                    func.cache.set(key, result)
             return result
 
         source = self._get_inner_code(getsource(_x), func)
@@ -60,13 +61,13 @@ class Cacher:
 
     @classmethod
     def _get_key(cls,
-                 instance_func: bool,
+                 is_instance_func: bool,
                  func_args: List[str],
                  args: tuple,
                  kwargs: dict,
                  defaults: Dict[str, Any],
                  annotations: Dict[str, Any]) -> tuple:
-        key_args = func_args[1:] if instance_func else func_args
+        key_args = func_args[1:] if is_instance_func else func_args
         if any(a is NotCached for a in annotations.values()):
             key_args = filter(lambda a: annotations.get(a) is not NotCached, key_args)
         elif any(a is Cached for a in annotations.values()):
