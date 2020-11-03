@@ -7,5 +7,5 @@ class Cache(ABC):
         pass
 
     @abstractmethod
-    def set(self, key, value):
+    def set(self, key, value, expiration: float = 0, overwrite: bool = False):
         pass
