@@ -2,9 +2,9 @@ from functools import partial, wraps
 from inspect import getsource, iscoroutinefunction, getfullargspec
 from typing import Optional, Callable, Any, Dict, List
 
-from thornfield.caches.cache import Cache
-from thornfield.errors import CachingError
-from thornfield.typing import NotCached, Cached
+from .caches.cache import Cache
+from .errors import CachingError
+from .typing import NotCached, Cached
 
 
 class Cacher:
