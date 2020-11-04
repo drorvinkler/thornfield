@@ -106,9 +106,39 @@ class TestCacher(TestCase):
         self.assertEqual(1, bar(1, 1))
         self.assertEqual(2, bar.call_count)
 
+    def test_caching_decorator_cached_generic_type_hint(self):
+        @self.cacher.cached
+        def bar(x: Cached[int], y):
+            bar.call_count += 1
+            return x
+
+        bar.call_count = 0
+        self.assertEqual(1, bar(1, 1))
+        self.assertEqual(5, bar(5, 1))
+        self.assertEqual(2, bar.call_count)
+        self.assertEqual(1, bar(1, 5))
+        self.assertEqual(2, bar.call_count)
+        self.assertEqual(1, bar(1, 1))
+        self.assertEqual(2, bar.call_count)
+
     def test_caching_decorator_not_cached_type_hint(self):
         @self.cacher.cached
         def bar(x, y: NotCached):
+            bar.call_count += 1
+            return x
+
+        bar.call_count = 0
+        self.assertEqual(1, bar(1, 1))
+        self.assertEqual(5, bar(5, 1))
+        self.assertEqual(2, bar.call_count)
+        self.assertEqual(1, bar(1, 5))
+        self.assertEqual(2, bar.call_count)
+        self.assertEqual(1, bar(1, 1))
+        self.assertEqual(2, bar.call_count)
+
+    def test_caching_decorator_not_cached_generic_type_hint(self):
+        @self.cacher.cached
+        def bar(x, y: NotCached[int]):
             bar.call_count += 1
             return x
 
