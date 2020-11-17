@@ -1,6 +1,6 @@
 from typing import TypeVar, Type
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class _Cached:
