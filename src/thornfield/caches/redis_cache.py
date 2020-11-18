@@ -34,10 +34,10 @@ class RedisCache(Cache):
                 raise CachingError(
                     'Package "yasoo" is not installed and no de/serializer passed'
                 )
-        if serializer is not None:
-            self._serialize = serializer
-        if deserializer is not None:
-            self._deserialize = deserializer
+        self._serialize = self._default_serialize if serializer is None else serializer
+        self._deserialize = (
+            self._default_deserialize if deserializer is None else deserializer
+        )
         self._redis = Redis(
             host=host,
             port=port,
@@ -62,10 +62,12 @@ class RedisCache(Cache):
         except Exception as e:
             raise CachingError(f"Could not set f{key} as {value}", exc=e)
 
-    def _serialize(self, obj) -> str:
+    @staticmethod
+    def _default_serialize(obj) -> str:
         return json.dumps(serialize(obj, preserve_iterable_types=True))
 
-    def _deserialize(self, data: Optional[str]):
+    @staticmethod
+    def _default_deserialize(data: Optional[str]):
         if data is None:
             return data
         return deserialize(json.loads(data))
