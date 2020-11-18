@@ -203,6 +203,23 @@ class TestCacher(TestCase):
         self.assertEqual({}, self.cache)
         self.assertNotEqual({}, data)
 
+    def test_cacher_creates_cache_only_once_per_function(self):
+        cache = create_autospec(Cache)
+        cache.get = MagicMock()
+        cache.set = MagicMock()
+        create_cache = MagicMock(return_value=cache)
+        cacher = Cacher(create_cache)
+
+        class Foo:
+            @cacher.cached
+            def bar(self, x):
+                return x
+
+        foo = Foo()
+        foo.bar(1)
+        foo.bar(2)
+        create_cache.assert_called_once()
+
     def test_multiple_functions_get_different_caches(self):
         caches = []
 

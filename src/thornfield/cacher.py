@@ -48,7 +48,7 @@ class Cacher:
                 func_defaults,
                 func_annotations,
             )
-            if not hasattr(func, "_cache"):
+            if not hasattr(func, "cache"):
                 real_func = (
                     getattr(args[0], func.__name__) if is_instance_func else func
                 )
