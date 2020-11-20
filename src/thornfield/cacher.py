@@ -17,16 +17,26 @@ class Cacher:
         self,
         cache: Optional[Cache] = None,
         validator: Optional[Callable[[Any], bool]] = None,
+        expiration: int = 0,
     ):
+        """
+        :param cache: The ``Cache`` to use. If ``None``, ``cache_impl`` is called to create one.
+        :param validator: A ``callable`` that will be called on the return value of the cached function.
+            The value will be cached only if ``validator`` returns ``True``.
+        :param expiration: Expiration time for each key, in milliseconds.
+        """
         if callable(cache):
-            return self._cached(cache, None, None)
-        return partial(self._cached, cache=cache, validator=validator)
+            return self._cached(cache, None, None, 0)
+        return partial(
+            self._cached, cache=cache, validator=validator, expiration=expiration
+        )
 
     def _cached(
         self,
         func: Callable,
         cache: Optional[Cache],
         validator: Optional[Callable[[Any], bool]],
+        expiration: int,
     ):
         if cache is None and self._cache_impl is None:
             raise CachingError("No cache and no cache creator provided.")
@@ -58,7 +68,7 @@ class Cacher:
             if result is NOT_FOUND:
                 result = func(*args, **kwargs)
                 if validator is None or validator(result):
-                    func.cache.set(key, result)
+                    func.cache.set(key, result, expiration)
             return result
 
         source = self._get_inner_code(getsource(_x), func)

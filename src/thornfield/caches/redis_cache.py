@@ -1,4 +1,3 @@
-import json
 from typing import Optional, Callable, Any
 
 from .cache import Cache
@@ -9,10 +8,6 @@ try:
     from redis import Redis
 except ModuleNotFoundError:
     Redis = None
-try:
-    from yasoo import serialize, deserialize
-except ImportError:
-    serialize = deserialize = None
 
 
 class RedisCache(Cache):
@@ -22,23 +17,13 @@ class RedisCache(Cache):
         port: int = 6379,
         db: int = 0,
         password: Optional[str] = None,
-        expiration: Optional[int] = None,
         serializer: Optional[Callable[[Any], str]] = None,
         deserializer: Optional[Callable[[Optional[str]], Any]] = None,
         **kwargs,
     ) -> None:
-        super().__init__()
+        super().__init__(serializer=serializer, deserializer=deserializer)
         if Redis is None:
             raise CachingError('Package "redis" is not installed')
-        if serialize is None:
-            if serializer is None or deserializer is None:
-                raise CachingError(
-                    'Package "yasoo" is not installed and no de/serializer passed'
-                )
-        self._serialize = self._default_serialize if serializer is None else serializer
-        self._deserialize = (
-            self._default_deserialize if deserializer is None else deserializer
-        )
         self._redis = Redis(
             host=host,
             port=port,
@@ -47,7 +32,6 @@ class RedisCache(Cache):
             decode_responses=True,
             **kwargs,
         )
-        self._expiration = expiration
 
     def get(self, key):
         try:
@@ -58,20 +42,10 @@ class RedisCache(Cache):
         except Exception as e:
             raise CachingError(f"Could not get {key}", exc=e)
 
-    def set(self, key, value):
+    def set(self, key, value, expiration: int):
         try:
             self._redis.set(
-                self._serialize(key), self._serialize(value), px=self._expiration
+                self._serialize(key), self._serialize(value), px=expiration or None
             )
         except Exception as e:
             raise CachingError(f"Could not set f{key} as {value}", exc=e)
-
-    @staticmethod
-    def _default_serialize(obj) -> str:
-        return json.dumps(serialize(obj, preserve_iterable_types=True))
-
-    @staticmethod
-    def _default_deserialize(data: Optional[str]):
-        if data is None:
-            return data
-        return deserialize(json.loads(data))

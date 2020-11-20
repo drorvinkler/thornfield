@@ -189,7 +189,7 @@ class TestCacher(TestCase):
                     return NOT_FOUND
                 return data[key]
 
-            def set(self, key, value):
+            def set(self, key, value, _):
                 data[key] = value
 
         @self.cacher.cached(CustomCache())
@@ -230,7 +230,7 @@ class TestCacher(TestCase):
             c = {}
             cache = create_autospec(Cache)
             cache.get = lambda x: c[x] if x in c else NOT_FOUND
-            cache.set = lambda k, v: c.update({k: v})
+            cache.set = lambda k, v, _: c.update({k: v})
             caches.append(c)
             return cache
         cacher = Cacher(create_cache)
@@ -257,7 +257,7 @@ class TestCacher(TestCase):
             def get(self, key):
                 return self.data.get(key)
 
-            def set(self, key, value):
+            def set(self, key, value, _):
                 self.data[key] = value
 
         cacher = Cacher(None)
@@ -315,7 +315,7 @@ class TestCacher(TestCase):
     @classmethod
     def _create_cacher(cls, cache: dict):
         get_func = lambda x: cache[x] if x in cache else NOT_FOUND
-        set_func = lambda k, v: cache.update({k: v})
+        set_func = lambda k, v, _: cache.update({k: v})
 
         def create_cache(_):
             cache = create_autospec(Cache)

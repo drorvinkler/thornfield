@@ -6,7 +6,7 @@ from unittest.mock import patch, create_autospec, MagicMock
 from redis import Redis
 
 from thornfield.cacher import Cacher
-from thornfield.caches import redis_cache
+from thornfield.caches import cache, redis_cache
 from thornfield.errors import CachingError
 
 _real_import = builtins.__import__
@@ -26,7 +26,7 @@ class TestRedisCache(TestCase):
 
     def test_no_yasoo_raises_error_only_on_instantiation_if_no_searializer(self):
         with patch('builtins.__import__', self.mock_import('yasoo')):
-            reload(redis_cache)
+            reload(cache)
         redis_cache.RedisCache(serializer=lambda x: '', deserializer=lambda x: '')
         self.assertRaises(CachingError, redis_cache.RedisCache)
 
@@ -41,7 +41,7 @@ class TestRedisCache(TestCase):
     def test_key_and_value_serialized_when_set(self):
         serialize = MagicMock(ret_value='x')
         self.redis_impl.set = MagicMock()
-        redis_cache.RedisCache(serializer=serialize).set(1, 2)
+        redis_cache.RedisCache(serializer=serialize).set(1, 2, 0)
         serialize.assert_any_call(1)
         serialize.assert_any_call(2)
 
