@@ -5,6 +5,7 @@ from unittest.mock import create_autospec, MagicMock
 
 from thornfield.cacher import Cacher
 from thornfield.caches.cache import Cache
+from thornfield.constants import NOT_FOUND
 from thornfield.errors import CachingError
 from thornfield.typing import Cached, NotCached
 
@@ -184,7 +185,9 @@ class TestCacher(TestCase):
 
         class CustomCache(Cache):
             def get(self, key):
-                return data.get(key)
+                if key not in data:
+                    return NOT_FOUND
+                return data[key]
 
             def set(self, key, value):
                 data[key] = value
@@ -226,8 +229,8 @@ class TestCacher(TestCase):
         def create_cache(_):
             c = {}
             cache = create_autospec(Cache)
-            cache.get = MagicMock(wraps=c.get)
-            cache.set = MagicMock(wraps=lambda k, v: c.update({k: v}))
+            cache.get = lambda x: c[x] if x in c else NOT_FOUND
+            cache.set = lambda k, v: c.update({k: v})
             caches.append(c)
             return cache
         cacher = Cacher(create_cache)
@@ -311,7 +314,7 @@ class TestCacher(TestCase):
 
     @classmethod
     def _create_cacher(cls, cache: dict):
-        get_func = cache.get
+        get_func = lambda x: cache[x] if x in cache else NOT_FOUND
         set_func = lambda k, v: cache.update({k: v})
 
         def create_cache(_):

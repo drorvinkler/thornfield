@@ -3,6 +3,7 @@ from inspect import getsource, iscoroutinefunction, getfullargspec
 from typing import Optional, Callable, Any, Dict, List
 
 from .caches.cache import Cache
+from .constants import NOT_FOUND
 from .errors import CachingError
 from .typing import NotCached, Cached
 
@@ -54,7 +55,7 @@ class Cacher:
                 )
                 func.cache = cache if cache is not None else self._cache_impl(real_func)
             result = func.cache.get(key)
-            if result is None:
+            if result is NOT_FOUND:
                 result = func(*args, **kwargs)
                 if validator is None or validator(result):
                     func.cache.set(key, result)

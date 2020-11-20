@@ -1,8 +1,9 @@
 import json
 from typing import Optional, Callable, Any
 
-from thornfield.caches.cache import Cache
-from thornfield.errors import CachingError
+from .cache import Cache
+from ..constants import NOT_FOUND
+from ..errors import CachingError
 
 try:
     from redis import Redis
@@ -50,7 +51,10 @@ class RedisCache(Cache):
 
     def get(self, key):
         try:
-            return self._deserialize(self._redis.get(self._serialize(key)))
+            value = self._redis.get(self._serialize(key))
+            if value is None:
+                return NOT_FOUND
+            return self._deserialize(value)
         except Exception as e:
             raise CachingError(f"Could not get {key}", exc=e)
 

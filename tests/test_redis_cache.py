@@ -5,6 +5,7 @@ from unittest.mock import patch, create_autospec, MagicMock
 
 from redis import Redis
 
+from thornfield.cacher import Cacher
 from thornfield.caches import redis_cache
 from thornfield.errors import CachingError
 
@@ -52,6 +53,27 @@ class TestRedisCache(TestCase):
         redis_cache.RedisCache(serializer=serialize, deserializer=deserialize).get(1)
         serialize.assert_called_once_with(1)
         deserialize.assert_called_once_with(2)
+
+    def test_none_caching(self):
+        import json
+        serialize = json.dumps
+        deserialize = json.loads
+        self.redis_impl.set = MagicMock()
+        self.redis_impl.get = MagicMock(return_value='null')
+        cacher = Cacher(lambda x: redis_cache.RedisCache(serializer=serialize, deserializer=deserialize))
+
+        @cacher.cached()
+        def foo():
+            foo.call_count += 1
+            return 5
+
+        foo.call_count = 0
+        self.assertIsNone(foo())
+        self.assertEqual(0, foo.call_count)
+
+        self.redis_impl.get = MagicMock(return_value=None)
+        self.assertEqual(5, foo())
+        self.assertEqual(1, foo.call_count)
 
     @staticmethod
     def mock_import(exclude):
