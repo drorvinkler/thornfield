@@ -18,8 +18,11 @@ class Cache(ABC):
         self,
         serializer: Optional[Callable[[Any], str]] = None,
         deserializer: Optional[Callable[[Optional[str]], Any]] = None,
+        serialization_needed: bool = True,
     ) -> None:
         super().__init__()
+        if not serialization_needed:
+            return
         if serialize is None or deserialize is None:
             if serializer is None or deserializer is None:
                 raise CachingError(

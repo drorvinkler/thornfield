@@ -5,7 +5,7 @@ from ..constants import NOT_FOUND
 
 class MemoryCache(Cache):
     def __init__(self) -> None:
-        super().__init__()
+        super().__init__(serialization_needed=False)
         self._cache = {}
 
     def get(self, key):
