@@ -48,4 +48,4 @@ class RedisCache(Cache):
                 self._serialize(key), self._serialize(value), px=expiration or None
             )
         except Exception as e:
-            raise CachingError(f"Could not set f{key} as {value}", exc=e)
+            raise CachingError(f"Could not set {key} as {value}", exc=e)

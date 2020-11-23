@@ -3,7 +3,8 @@ from unittest.mock import create_autospec, MagicMock
 
 from tests.utils import test_no_yasoo
 from thornfield.cacher import Cacher
-from thornfield.caches.postgresql_cache import ConnectionPoolWrapper, PostgresqlCache, ConnectionWrapper
+from thornfield.caches.postgresql_cache import PostgresqlCache
+from thornfield.postgresql_key_value_adapter import ConnectionPoolWrapper
 
 
 class TestPostgresqlCache(TestCase):
@@ -17,7 +18,7 @@ class TestPostgresqlCache(TestCase):
         self.connection.cursor = MagicMock(return_value=self.cursor)
         self.connection.commit = MagicMock()
         self.pool = create_autospec(ConnectionPoolWrapper)
-        self.pool.getconn = MagicMock(return_value=ConnectionWrapper(self.connection, lambda x: None))
+        self.pool.getconn = MagicMock(return_value=self.connection)
 
     def test_no_yasoo_raises_error_only_on_instantiation_if_no_searializer(self):
         test_no_yasoo(self, PostgresqlCache, True, connection_pool=self.pool, table='')
