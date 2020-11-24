@@ -3,7 +3,7 @@ import inspect
 from unittest import TestCase
 from unittest.mock import create_autospec, MagicMock
 
-from thornfield.cacher import Cacher
+from thornfield import Cacher
 from thornfield.caches.cache import Cache
 from thornfield.constants import NOT_FOUND
 from thornfield.errors import CachingError

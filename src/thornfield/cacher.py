@@ -10,6 +10,11 @@ from .typing import NotCached, Cached
 
 class Cacher:
     def __init__(self, cache_impl: Optional[Callable[[Callable], Cache]]) -> None:
+        """
+
+        :param cache_impl: An optional factory function that gets
+            the cached method and returns an implementation of ``Cache``.
+        """
         super().__init__()
         self._cache_impl = cache_impl
 
@@ -20,7 +25,7 @@ class Cacher:
         expiration: int = 0,
     ):
         """
-        :param cache: The ``Cache`` to use. If ``None``, ``cache_impl`` is called to create one.
+        :param cache: The ``Cache`` to use. If ``None``, ``self.cache_impl`` is called to create one.
         :param validator: A ``callable`` that will be called on the return value of the cached function.
             The value will be cached only if ``validator`` returns ``True``.
         :param expiration: Expiration time for each key, in milliseconds.

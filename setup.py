@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="thornfield",
-    version="0.1.0",
+    version="1.0.0",
     author="Dror A. Vinkler",
     description="Advanced caching in python",
     long_description=long_description,
