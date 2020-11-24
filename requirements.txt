@@ -1,2 +1,3 @@
 redis
 yasoo
+psycopg2

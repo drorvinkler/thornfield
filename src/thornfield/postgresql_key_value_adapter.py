@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, List
 
 try:
     from psycopg2.pool import AbstractConnectionPool
@@ -20,11 +20,13 @@ class ConnectionWrapper:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._callback(self)
 
-    def execute_query(self, query: str, fetch: bool, *params: str):
+    def execute_query(self, query: str, fetch: int, *params: str):
         with self._connection.cursor() as cursor:
             cursor.execute(query, params)
-            if fetch:
+            if fetch == 1:
                 return cursor.fetchone()
+            elif fetch == -1:
+                return cursor.fetchall()
         self._connection.commit()
 
 
@@ -64,7 +66,7 @@ class PostgresqlKeyValueAdapter:
         with self._pool.getconn() as connection:
             exists = connection.execute_query(
                 f"select exists(select * from {self._table} where {self._key_col}=%s)",
-                True,
+                1,
                 key,
             )
             if exists[0]:
@@ -78,44 +80,46 @@ class PostgresqlKeyValueAdapter:
             assert self._ts_col
             query += f" and {self._ts_col}<{max_ts}"
         with self._pool.getconn() as connection:
-            result = connection.execute_query(query, True, key)
+            result = connection.execute_query(query, 1, key)
         return result[0] if result else None
+
+    def keys(self) -> List[str]:
+        with self._pool.getconn() as connection:
+            result = connection.execute_query(
+                f"select {self._key_col} from {self._table}", -1
+            )
+        return [t[0] for t in result]
 
     def _create_table_if_not_exists(self):
         with self._pool.getconn() as connection:
             exists = connection.execute_query(
                 f"select exists(select * from information_schema.tables where table_name=%s)",
-                True,
+                1,
                 self._table,
             )
             if not exists[0]:
                 structure = f"id serial primary key, {self._key_col} text unique, {self._value_col} text"
                 if self._ts_col:
                     structure += f", {self._ts_col} bigint"
-                connection.execute_query(
-                    f"create table {self._table} ({structure})", False
-                )
+                connection.execute_query(f"create table {self._table} ({structure})", 0)
 
-    def _update(self, connection, key, value, ts):
+    def _update(self, connection: ConnectionWrapper, key, value, ts):
         values_str = f"{self._value_col}=%s"
         if self._ts_col:
             values_str += f", {self._ts_col}={ts}"
         connection.execute_query(
             f"update {self._table} set ({values_str}) where {self._key_col}=%s",
-            False,
+            0,
             value,
             key,
         )
 
-    def _add(self, connection, key, value, ts):
+    def _add(self, connection: ConnectionWrapper, key, value, ts):
         columns = f"{self._key_col}, {self._value_col}"
         values = "%s, %s"
         if self._ts_col:
             columns += f", {self._ts_col}"
             values += f", {ts}"
         connection.execute_query(
-            f"insert into {self._table} ({columns}) values ({values})",
-            False,
-            key,
-            value,
+            f"insert into {self._table} ({columns}) values ({values})", 1, key, value,
         )
