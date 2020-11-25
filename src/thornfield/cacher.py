@@ -1,5 +1,6 @@
 from functools import partial, wraps
 from inspect import getsource, iscoroutinefunction, getfullargspec
+from types import MethodType
 from typing import Optional, Callable, Any, Dict, List
 
 from .caches.cache import Cache
@@ -36,12 +37,39 @@ class Cacher:
             self._cached, cache=cache, validator=validator, expiration=expiration
         )
 
+    def cache_method(
+        self,
+        method: MethodType,
+        cache: Optional[Cache] = None,
+        validator: Optional[Callable[[Any], bool]] = None,
+        expiration: int = 0,
+        use_base_method: bool = True,
+    ):
+        func_passed_to_cache = None
+        if use_base_method:
+            func_passed_to_cache = next(
+                getattr(c, method.__name__)
+                for c in reversed(method.__self__.__class__.mro())
+                if hasattr(c, method.__name__)
+            )
+        new_method = self._cached(
+            method.__func__,
+            cache=cache,
+            validator=validator,
+            expiration=expiration,
+            func_passed_to_cache=func_passed_to_cache,
+        )
+        setattr(
+            method.__self__, method.__name__, MethodType(new_method, method.__self__)
+        )
+
     def _cached(
         self,
         func: Callable,
         cache: Optional[Cache],
         validator: Optional[Callable[[Any], bool]],
         expiration: int,
+        func_passed_to_cache: Optional[Callable] = None,
     ):
         if cache is None and self._cache_impl is None:
             raise CachingError("No cache and no cache creator provided.")
@@ -65,10 +93,7 @@ class Cacher:
                 func_annotations,
             )
             if not hasattr(func, "cache"):
-                real_func = (
-                    getattr(args[0], func.__name__) if is_instance_func else func
-                )
-                func.cache = cache if cache is not None else self._cache_impl(real_func)
+                func.cache = cache or self._cache_impl(func_passed_to_cache or func)
             result = func.cache.get(key)
             if result is NOT_FOUND:
                 result = func(*args, **kwargs)

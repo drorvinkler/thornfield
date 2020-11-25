@@ -310,7 +310,44 @@ class TestCacher(TestCase):
 
         foo = Foo()
         foo.bar(1)
-        self.assertEqual(foo.bar, create_cache.func)
+        self.assertEqual(Foo.bar.__wrapped__, create_cache.func)
+
+    def test_cache_method_use_base_method(self):
+        def create_cache(func):
+            create_cache.func = func
+            cache = create_autospec(Cache)
+            cache.get = MagicMock(ret_val=None)
+            cache.set = MagicMock(ret_val=None)
+            return cache
+
+        cacher = Cacher(create_cache)
+        use_base_method = True
+
+        class FooParent:
+            def __init__(self) -> None:
+                super().__init__()
+                cacher.cache_method(self.bar, use_base_method=use_base_method)
+
+            def bar(self, x):
+                pass
+
+        class Foo(FooParent):
+            def bar(self, x):
+                return x
+
+        foo = Foo()
+        foo.bar(1)
+        self.assertEqual(FooParent.bar, create_cache.func)
+
+        use_base_method = False
+
+        class Foo2(FooParent):
+            def bar(self, x):
+                return x
+
+        foo = Foo2()
+        foo.bar(1)
+        self.assertEqual(Foo2.bar, create_cache.func)
 
     @classmethod
     def _create_cacher(cls, cache: dict):
