@@ -45,6 +45,17 @@ class Cacher:
         expiration: int = 0,
         use_base_method: bool = True,
     ):
+        """
+
+        :param method: The method to cache.
+        :param cache: The ``Cache`` to use. If ``None``, ``self.cache_impl`` is called to create one.
+        :param validator: A ``callable`` that will be called on the return value of the cached function.
+            The value will be cached only if ``validator`` returns ``True``.
+        :param expiration: Expiration time for each key, in milliseconds.
+        :param use_base_method: If ``method`` is an implementation of a base method,
+            whether to pass to ``self.cache_impl`` it or the base method.
+        :return:
+        """
         func_passed_to_cache = None
         if use_base_method:
             func_passed_to_cache = next(
