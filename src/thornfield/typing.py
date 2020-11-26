@@ -1,5 +1,7 @@
-from typing import TypeVar, Type
+from types import FunctionType, MethodType
+from typing import TypeVar, Type, Union
 
+NormalCallable = Union[FunctionType, MethodType]
 T = TypeVar("T")
 
 

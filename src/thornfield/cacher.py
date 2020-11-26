@@ -1,16 +1,16 @@
 from functools import partial, wraps
 from inspect import getsource, iscoroutinefunction, getfullargspec
 from types import MethodType
-from typing import Optional, Callable, Any, Dict, List
+from typing import Optional, Callable, Any, Dict, List, cast
 
 from .caches.cache import Cache
 from .constants import NOT_FOUND
 from .errors import CachingError
-from .typing import NotCached, Cached
+from .typing import NotCached, Cached, NormalCallable
 
 
 class Cacher:
-    def __init__(self, cache_impl: Optional[Callable[[Callable], Cache]]) -> None:
+    def __init__(self, cache_impl: Optional[Callable[[NormalCallable], Cache]]) -> None:
         """
 
         :param cache_impl: An optional factory function that gets
@@ -31,8 +31,8 @@ class Cacher:
             The value will be cached only if ``validator`` returns ``True``.
         :param expiration: Expiration time for each key, in milliseconds.
         """
-        if callable(cache):
-            return self._cached(cache, None, None, 0)
+        if isinstance(cache, NormalCallable):
+            return self._cached(cast(NormalCallable, cache), None, None, 0)
         return partial(
             self._cached, cache=cache, validator=validator, expiration=expiration
         )
@@ -76,11 +76,11 @@ class Cacher:
 
     def _cached(
         self,
-        func: Callable,
+        func: NormalCallable,
         cache: Optional[Cache],
         validator: Optional[Callable[[Any], bool]],
         expiration: int,
-        func_passed_to_cache: Optional[Callable] = None,
+        func_passed_to_cache: Optional[NormalCallable] = None,
     ):
         if cache is None and self._cache_impl is None:
             raise CachingError("No cache and no cache creator provided.")
