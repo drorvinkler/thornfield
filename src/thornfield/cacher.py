@@ -31,7 +31,7 @@ class Cacher:
             The value will be cached only if ``validator`` returns ``True``.
         :param expiration: Expiration time for each key, in milliseconds.
         """
-        if isinstance(cache, NormalCallable):
+        if isinstance(cache, Callable):
             return self._cached(cast(NormalCallable, cache), None, None, 0)
         return partial(
             self._cached, cache=cache, validator=validator, expiration=expiration
