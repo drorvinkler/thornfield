@@ -1,5 +1,9 @@
 Changelog
 =========
+1.1.1 (2020-11-26)
+___________________
+- Fixed a bug in Posgtresql cache
+
 1.1.0 (2020-11-25)
 ___________________
 - Added `cache_method`
