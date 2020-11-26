@@ -18,7 +18,7 @@ class ConnectionWrapper:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._callback(self)
+        self._callback(self._connection)
 
     def execute_query(self, query: str, fetch: int, *params: str):
         with self._connection.cursor() as cursor:
@@ -38,7 +38,7 @@ class ConnectionPoolWrapper:
     def getconn(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._pool.getconn(), self.putconn)
 
-    def putconn(self, conn: ConnectionWrapper):
+    def putconn(self, conn):
         self._pool.putconn(conn)
 
 
@@ -121,5 +121,8 @@ class PostgresqlKeyValueAdapter:
             columns += f", {self._ts_col}"
             values += f", {ts}"
         connection.execute_query(
-            f"insert into {self._table} ({columns}) values ({values})", 1, key, value,
+            f"insert into {self._table} ({columns}) values ({values})",
+            1,
+            key,
+            value,
         )
