@@ -25,9 +25,9 @@ The decorator supports:
 * Setting an expiration time for the cached values.
 * Caching only values that match a constraint (e.g. not `None`).
 * Using only some of the function parameters as keys for the cache.
-* Caching async function.
+* Caching async functions.
 
-### Caching only some parameters
+#### Caching only some parameters
 In case you don't want to use all the parameters of the function as cache key,
 you can the `Cached` or `NotCached` types:
 ```
@@ -41,7 +41,20 @@ def request(url: str, token: str, timeout: NotCached[int]):
 @cached
 async def request_async(url: Cached[str], timeout: int, callback):
     ...
-``` 
+```
+
+#### Caching abstract methods
+In order to avoid adding the same decorator to all implementations of an
+abstract method, you can use `cache_method` as follows:
+```
+class Base(ABC):
+    def __init__(self):
+        cacher.cache_method(do_something)
+
+    @abstractmethod
+    def do_something(self):
+        pass
+```
 
 ## Cache Factories
 In the `cache_factories` package you can find cache factories for Redis and PostgreSQL.
