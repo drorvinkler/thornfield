@@ -28,7 +28,7 @@ class RedisCacheFactory(CacheFactory):
         key = self._func_to_key(func)
         db = self._index.get(key)
         if db is None:
-            used = {self._index.get(k) for k in self._index.keys("*")}
+            used = {int(self._index.get(k)) for k in self._index.keys("*")}
             db = min({i + 1 for i in range(len(used) + 1)}.difference(used))
             self._index.set(key, db)
         return RedisCache(
