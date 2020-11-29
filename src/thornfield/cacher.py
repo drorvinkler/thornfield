@@ -4,9 +4,13 @@ from types import MethodType
 from typing import Optional, Callable, Any, Dict, List, cast
 
 from .caches.cache import Cache
+from .caching_data import CachingData
 from .constants import NOT_FOUND
 from .errors import CachingError
 from .typing import NotCached, Cached, NormalCallable
+
+_CACHE_ATTR = "cache"
+_CACHING_DATA_ATTR = "caching_data"
 
 
 class Cacher:
@@ -74,6 +78,32 @@ class Cacher:
             method.__self__, method.__name__, MethodType(new_method, method.__self__)
         )
 
+    def get_cached_result(self, func: NormalCallable, *args, **kwargs) -> Any:
+        wrapped = getattr(func, "__wrapped__", None)
+        caching_data: Optional[CachingData] = getattr(func, _CACHING_DATA_ATTR, None)
+        if wrapped is None or caching_data is None:
+            return NOT_FOUND
+
+        is_instance_func = args and hasattr(args[0], func.__name__)
+        func_args = caching_data.func_args
+        if len(args) < len(func_args) and func_args[0] == "self":
+            func_args = func_args[1:]
+        key = self._get_key(
+            is_instance_func,
+            func_args,
+            args,
+            kwargs,
+            caching_data.func_defaults,
+            caching_data.func_annotations,
+        )
+        func_cache: Optional[Cache] = getattr(wrapped, _CACHE_ATTR, None)
+        if func_cache is None:
+            func_cache = caching_data.cache or self._cache_impl(
+                caching_data.func_passed_to_cache or func
+            )
+            setattr(wrapped, _CACHE_ATTR, func_cache)
+        return func_cache.get(key)
+
     def _cached(
         self,
         func: NormalCallable,
@@ -103,20 +133,30 @@ class Cacher:
                 func_defaults,
                 func_annotations,
             )
-            if not hasattr(func, "cache"):
-                func.cache = cache or self._cache_impl(func_passed_to_cache or func)
-            result = func.cache.get(key)
+            func_cache = getattr(func, _CACHE_ATTR, None)
+            if func_cache is None:
+                func_cache = cache or self._cache_impl(func_passed_to_cache or func)
+                setattr(func, _CACHE_ATTR, func_cache)
+            result = func_cache.get(key)
             if result is NOT_FOUND:
                 result = func(*args, **kwargs)
                 if validator is None or validator(result):
-                    func.cache.set(key, result, expiration)
+                    func_cache.set(key, result, expiration)
             return result
 
         source = self._get_inner_code(getsource(_x), func)
         g = dict(globals())
         g.update(locals())
         exec(compile(source, "", "exec"), g, locals())
-        return wraps(func)(locals()["x"])
+        inner = locals()["x"]
+        inner.caching_data = CachingData(
+            func_args=func_args,
+            func_annotations=func_annotations,
+            func_defaults=func_defaults,
+            cache=cache,
+            func_passed_to_cache=func_passed_to_cache,
+        )
+        return wraps(func)(inner)
 
     @classmethod
     def _get_inner_code(cls, base, func):

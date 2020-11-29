@@ -167,6 +167,129 @@ class TestCacher(TestCase):
         self.assertEqual(1, bar(1, 1, 1))
         self.assertEqual(2, bar.call_count)
 
+    def test_get_cached_result(self):
+        @self.cacher.cached
+        def bar(x):
+            bar.call_count += 1
+            return x
+
+        bar.call_count = 0
+        self.assertEqual(1, bar(1))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(1, self.cacher.get_cached_result(bar, 1))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(NOT_FOUND, self.cacher.get_cached_result(bar, 3))
+
+    def test_get_cached_result_for_instance_method(self):
+        class Foo:
+            call_count = 0
+
+            @self.cacher.cached
+            def bar(self, x):
+                Foo.call_count += 1
+                return x
+
+        foo = Foo()
+        self.assertEqual(2, foo.bar(2))
+        self.assertEqual(1, Foo.call_count)
+        self.assertEqual(2, self.cacher.get_cached_result(foo.bar, 2))
+        self.assertEqual(1, Foo.call_count)
+        self.assertEqual(NOT_FOUND, self.cacher.get_cached_result(foo.bar, 3))
+
+    def test_get_cached_result_for_static_method(self):
+        class Foo:
+            call_count = 0
+
+            @staticmethod
+            @self.cacher.cached
+            def bar(x):
+                Foo.call_count += 1
+                return x
+
+        foo = Foo()
+        self.assertEqual(5, foo.bar(5))
+        self.assertEqual(1, Foo.call_count)
+        self.assertEqual(5, self.cacher.get_cached_result(foo.bar, 5))
+        self.assertEqual(1, Foo.call_count)
+        self.assertEqual(NOT_FOUND, self.cacher.get_cached_result(foo.bar, 3))
+
+    def test_get_cached_result_multiple_arguments(self):
+        @self.cacher.cached
+        def bar(x, y):
+            bar.call_count += 1
+            return x
+
+        bar.call_count = 0
+        self.assertEqual(1, bar(1, 5))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(1, self.cacher.get_cached_result(bar, 1, 5))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(NOT_FOUND, self.cacher.get_cached_result(bar, 3, 5))
+
+    def test_get_cached_result_async_function(self):
+        @self.cacher.cached
+        async def bar(x):
+            bar.call_count += 1
+            return x
+
+        bar.call_count = 0
+        event_loop = asyncio.get_event_loop()
+        self.assertEqual(1, event_loop.run_until_complete(bar(1)))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(1, self.cacher.get_cached_result(bar, 1))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(NOT_FOUND, self.cacher.get_cached_result(bar, 3, 5))
+
+    def test_get_cached_result_cached_type_hint(self):
+        @self.cacher.cached
+        def bar(x: Cached, y):
+            bar.call_count += 1
+            return x
+
+        bar.call_count = 0
+        self.assertEqual(1, bar(1, 1))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(1, self.cacher.get_cached_result(bar, 1, 5))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(NOT_FOUND, self.cacher.get_cached_result(bar, 3, 5))
+
+    def test_get_cached_result_not_cached_type_hint(self):
+        @self.cacher.cached
+        def bar(x, y: NotCached):
+            bar.call_count += 1
+            return x
+
+        bar.call_count = 0
+        self.assertEqual(1, bar(1, 1))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(1, self.cacher.get_cached_result(bar, 1, 5))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(NOT_FOUND, self.cacher.get_cached_result(bar, 3, 5))
+
+    def test_get_cached_result_both_cached_and_not_cached_type_hints(self):
+        @self.cacher.cached
+        def bar(x: Cached, y: NotCached, z):
+            bar.call_count += 1
+            return x
+
+        bar.call_count = 0
+        self.assertEqual(1, bar(1, 1, 1))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(1, self.cacher.get_cached_result(bar, 1, 5, 1))
+        self.assertEqual(1, bar.call_count)
+        self.assertEqual(NOT_FOUND, self.cacher.get_cached_result(bar, 1, 1, 3))
+
+    def test_get_cached_result_before_function_called(self):
+        @self.cacher.cached
+        def bar(x):
+            bar.call_count += 1
+            return x
+
+        bar.call_count = 0
+        self.assertEqual(0, bar.call_count)
+        self.assertEqual(NOT_FOUND, self.cacher.get_cached_result(bar, 3))
+        self.assertEqual(0, bar.call_count)
+
     def test_caching_decorator_with_validator(self):
         @self.cacher.cached(validator=lambda x: bool(x))
         def bar(x):
@@ -351,7 +474,7 @@ class TestCacher(TestCase):
 
     @classmethod
     def _create_cacher(cls, cache: dict):
-        get_func = lambda x: cache[x] if x in cache else NOT_FOUND
+        get_func = lambda x: cache.get(x, NOT_FOUND)
         set_func = lambda k, v, _: cache.update({k: v})
 
         def create_cache(_):
