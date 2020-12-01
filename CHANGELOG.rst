@@ -1,5 +1,9 @@
 Changelog
 =========
+1.2.1 (2020-12-01)
+___________________
+- Fixed a bug in Postgresql cache
+
 1.2.0 (2020-11-29)
 ___________________
 - Can get a cached value from a cached method without calling it

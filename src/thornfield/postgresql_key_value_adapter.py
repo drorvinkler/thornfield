@@ -1,9 +1,16 @@
+from enum import Enum, auto
 from typing import Callable, Optional, List
 
 try:
     from psycopg2.pool import AbstractConnectionPool
 except ImportError:
     AbstractConnectionPool = ""
+
+
+class FetchAmount(Enum):
+    ONE = auto()
+    ALL = auto()
+    ZERO = auto()
 
 
 class ConnectionWrapper:
@@ -20,12 +27,12 @@ class ConnectionWrapper:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._callback(self._connection)
 
-    def execute_query(self, query: str, fetch: int, *params: str):
+    def execute_query(self, query: str, fetch: FetchAmount, *params: str):
         with self._connection.cursor() as cursor:
             cursor.execute(query, params)
-            if fetch == 1:
-                return cursor.fetchone()
-            elif fetch == -1:
+            if fetch is FetchAmount.ONE:
+                return cursor.fetchone() if cursor.rowcount > 0 else None
+            elif fetch is FetchAmount.ALL:
                 return cursor.fetchall()
         self._connection.commit()
 
@@ -64,12 +71,7 @@ class PostgresqlKeyValueAdapter:
         if self._ts_col:
             assert ts is not None
         with self._pool.getconn() as connection:
-            exists = connection.execute_query(
-                f"select exists(select * from {self._table} where {self._key_col}=%s)",
-                1,
-                key,
-            )
-            if exists[0]:
+            if self._exists(connection, self._table, self._key_col, key):
                 self._update(connection, key, value, ts)
             else:
                 self._add(connection, key, value, ts)
@@ -80,28 +82,29 @@ class PostgresqlKeyValueAdapter:
             assert self._ts_col
             query += f" and {self._ts_col}<{max_ts}"
         with self._pool.getconn() as connection:
-            result = connection.execute_query(query, 1, key)
+            result = connection.execute_query(query, FetchAmount.ONE, key)
         return result[0] if result else None
 
     def keys(self) -> List[str]:
         with self._pool.getconn() as connection:
             result = connection.execute_query(
-                f"select {self._key_col} from {self._table}", -1
+                f"select {self._key_col} from {self._table}", FetchAmount.ALL
             )
         return [t[0] for t in result]
 
     def _create_table_if_not_exists(self):
         with self._pool.getconn() as connection:
-            exists = connection.execute_query(
-                f"select exists(select * from information_schema.tables where table_name=%s)",
-                1,
-                self._table,
+            exists = self._exists(
+                connection, "information_schema.tables", "table_name", self._table
             )
-            if not exists[0]:
-                structure = f"id serial primary key, {self._key_col} text unique, {self._value_col} text"
-                if self._ts_col:
-                    structure += f", {self._ts_col} bigint"
-                connection.execute_query(f"create table {self._table} ({structure})", 0)
+            if exists:
+                return
+            structure = f"id serial primary key, {self._key_col} text unique, {self._value_col} text"
+            if self._ts_col:
+                structure += f", {self._ts_col} bigint"
+            connection.execute_query(
+                f"create table {self._table} ({structure})", FetchAmount.ZERO
+            )
 
     def _update(self, connection: ConnectionWrapper, key, value, ts):
         values_str = f"{self._value_col}=%s"
@@ -109,7 +112,7 @@ class PostgresqlKeyValueAdapter:
             values_str += f", {self._ts_col}={ts}"
         connection.execute_query(
             f"update {self._table} set ({values_str}) where {self._key_col}=%s",
-            0,
+            FetchAmount.ZERO,
             value,
             key,
         )
@@ -122,7 +125,18 @@ class PostgresqlKeyValueAdapter:
             values += f", {ts}"
         connection.execute_query(
             f"insert into {self._table} ({columns}) values ({values})",
-            1,
+            FetchAmount.ZERO,
             key,
             value,
         )
+
+    @classmethod
+    def _exists(
+        cls, connection: ConnectionWrapper, table: str, column: str, value: str
+    ) -> bool:
+        exists = connection.execute_query(
+            f"select exists(select * from {table} where {column}=%s)",
+            FetchAmount.ONE,
+            value,
+        )
+        return exists[0]
