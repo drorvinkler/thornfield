@@ -14,6 +14,7 @@ class TestPostgresqlCache(TestCase):
         self.cursor.__enter__ = lambda x: x
         self.cursor.execute = MagicMock()
         self.cursor.fetchone = MagicMock()
+        self.cursor.rowcount = 1
         self.connection = MagicMock()
         self.connection.cursor = MagicMock(return_value=self.cursor)
         self.connection.commit = MagicMock()
