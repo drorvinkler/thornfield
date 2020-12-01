@@ -111,7 +111,7 @@ class PostgresqlKeyValueAdapter:
         if self._ts_col:
             values_str += f", {self._ts_col}={ts}"
         connection.execute_query(
-            f"update {self._table} set ({values_str}) where {self._key_col}=%s",
+            f"update {self._table} set {values_str} where {self._key_col}=%s",
             FetchAmount.ZERO,
             value,
             key,
