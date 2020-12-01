@@ -35,6 +35,7 @@ class PostgresqlCacheFactory(CacheFactory):
         )
 
     def _normalize_table_name(self, table_name: str) -> str:
+        table_name = table_name.lower()
         if len(table_name) > 63:
             n = self._adapter.get(table_name)
             if not n:
