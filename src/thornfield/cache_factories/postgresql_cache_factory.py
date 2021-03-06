@@ -2,17 +2,18 @@ import re
 from types import MethodType, FunctionType
 from typing import Union, Optional, Callable, Any
 
-from psycopg2.pool import AbstractConnectionPool
-
 from .cache_factory import CacheFactory
 from ..caches.postgresql_cache import PostgresqlCache
-from ..postgresql_key_value_adapter import PostgresqlKeyValueAdapter
+from ..postgresql_key_value_adapter import (
+    PostgresqlKeyValueAdapter,
+    ConnectionPool,
+)
 
 
 class PostgresqlCacheFactory(CacheFactory):
     def __init__(
         self,
-        connection_pool: AbstractConnectionPool,
+        connection_pool: ConnectionPool,
         serializer: Optional[Callable[[Any], str]] = None,
         deserializer: Optional[Callable[[Optional[str]], Any]] = None,
         index_table: str = "_index",

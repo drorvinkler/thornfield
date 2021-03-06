@@ -4,18 +4,16 @@ from typing import Optional, Any, Callable
 from .cache import Cache
 from ..constants import NOT_FOUND
 from ..errors import CachingError
-from ..postgresql_key_value_adapter import PostgresqlKeyValueAdapter
-
-try:
-    from psycopg2.pool import AbstractConnectionPool
-except ImportError:
-    AbstractConnectionPool = ""
+from ..postgresql_key_value_adapter import (
+    PostgresqlKeyValueAdapter,
+    ConnectionPool,
+)
 
 
 class PostgresqlCache(Cache):
     def __init__(
         self,
-        connection_pool: AbstractConnectionPool,
+        connection_pool: ConnectionPool,
         table: str,
         serializer: Optional[Callable[[Any], str]] = None,
         deserializer: Optional[Callable[[Optional[str]], Any]] = None,

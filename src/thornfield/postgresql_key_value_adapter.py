@@ -1,10 +1,12 @@
 from enum import Enum, auto
-from typing import Callable, Optional, List
+from typing import Callable, Optional, List, Union
 
 try:
     from psycopg2.pool import AbstractConnectionPool
 except ImportError:
-    AbstractConnectionPool = ""
+    AbstractConnectionPool = None
+
+ConnectionPool = Union[AbstractConnectionPool, Callable[[], AbstractConnectionPool]]
 
 
 class FetchAmount(Enum):
@@ -38,9 +40,15 @@ class ConnectionWrapper:
 
 
 class ConnectionPoolWrapper:
-    def __init__(self, pool: AbstractConnectionPool) -> None:
+    def __init__(self, pool: ConnectionPool) -> None:
         super().__init__()
-        self._pool = pool
+        self._raw_pool = pool
+
+    @property
+    def _pool(self):
+        if isinstance(self._raw_pool, Callable):
+            self._raw_pool = self._raw_pool()
+        return self._raw_pool
 
     def getconn(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._pool.getconn(), self.putconn)
@@ -52,7 +60,7 @@ class ConnectionPoolWrapper:
 class PostgresqlKeyValueAdapter:
     def __init__(
         self,
-        connection_pool: AbstractConnectionPool,
+        connection_pool: ConnectionPool,
         table_name: str,
         key_col: str = "key",
         value_col: str = "value",
