@@ -22,9 +22,16 @@ class PostgresqlCacheFactory(CacheFactory):
         self.connection_pool = connection_pool
         self.serializer = serializer
         self.deserializer = deserializer
-        self._adapter = PostgresqlKeyValueAdapter(
-            self.connection_pool, index_table, ts_col=None
-        )
+        self.index_table = index_table
+        self._pkv_adapter = None
+
+    @property
+    def _adapter(self) -> PostgresqlKeyValueAdapter:
+        if self._pkv_adapter is None:
+            self._pkv_adapter = PostgresqlKeyValueAdapter(
+                self.connection_pool, self.index_table, ts_col=None
+            )
+        return self._pkv_adapter
 
     def create(self, func: Union[MethodType, FunctionType]) -> PostgresqlCache:
         table = self._normalize_table_name(self._func_to_key(func))

@@ -1,5 +1,9 @@
 Changelog
 =========
+1.3.1 (2021-03-07)
+___________________
+- Bug fix in lazy connection pool creation
+
 1.3.0 (2021-03-07)
 ___________________
 - Added an option to create `psycopg2` connection pools lazily, to fix problems with forking (e.g. with uwsgi)
