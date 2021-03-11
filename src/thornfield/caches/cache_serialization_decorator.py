@@ -32,7 +32,7 @@ class CacheSerializationDecorator(Cache):
 
         if deserializer is None:
             self._deserialize = self._noop
-        elif serializer is ...:
+        elif deserializer is ...:
             if deserialize is None:
                 raise CachingError(
                     'Package "yasoo" is not installed and no deserializer passed'
