@@ -1,15 +1,11 @@
 from time import sleep
 from unittest import TestCase
 
-from tests.utils import test_no_yasoo
 from thornfield.cacher import Cacher
 from thornfield.caches.memory_cache import MemoryCache
 
 
-class TestMemoryCache(TestCase):
-    def test_no_yasoo_does_not_raise_error(self):
-        test_no_yasoo(self, MemoryCache, False)
-
+class TestMemoryDAL(TestCase):
     def test_basic(self):
         cacher = Cacher(self._create_cache)
 

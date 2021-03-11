@@ -1,5 +1,11 @@
 Changelog
 =========
+1.4.0 (2021-03-12)
+___________________
+- Refactored serialization out of the cache into a decorator
+- Added a compression decorator
+- Postgresql cache now supports binary values (for compression)
+
 1.3.1 (2021-03-07)
 ___________________
 - Bug fix in lazy connection pool creation

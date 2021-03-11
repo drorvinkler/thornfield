@@ -1,4 +1,4 @@
-from typing import Optional, Callable, Any
+from typing import Optional, AnyStr
 
 from .cache import Cache
 from ..constants import NOT_FOUND
@@ -17,11 +17,9 @@ class RedisCache(Cache):
         port: int = 6379,
         db: int = 0,
         password: Optional[str] = None,
-        serializer: Optional[Callable[[Any], str]] = None,
-        deserializer: Optional[Callable[[Optional[str]], Any]] = None,
         **kwargs,
     ) -> None:
-        super().__init__(serializer=serializer, deserializer=deserializer)
+        super().__init__()
         if Redis is None:
             raise CachingError('Package "redis" is not installed')
         self._redis = Redis(
@@ -33,19 +31,17 @@ class RedisCache(Cache):
             **kwargs,
         )
 
-    def get(self, key):
+    def get(self, key: str) -> AnyStr:
         try:
-            value = self._redis.get(self._serialize(key))
+            value = self._redis.get(key)
             if value is None:
                 return NOT_FOUND
-            return self._deserialize(value)
+            return value
         except Exception as e:
             raise CachingError(f"Could not get {key}", exc=e)
 
-    def set(self, key, value, expiration: int):
+    def set(self, key: str, value: AnyStr, expiration: int) -> None:
         try:
-            self._redis.set(
-                self._serialize(key), self._serialize(value), px=expiration or None
-            )
+            self._redis.set(key, value, px=expiration or None)
         except Exception as e:
             raise CachingError(f"Could not set {key} as {value}", exc=e)

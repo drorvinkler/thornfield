@@ -3,7 +3,7 @@ from inspect import getsource, iscoroutinefunction, getfullargspec
 from types import MethodType
 from typing import Optional, Callable, Any, Dict, List, cast
 
-from .caches.cache import Cache
+from thornfield.caches.cache import Cache
 from .caching_data import CachingData
 from .constants import NOT_FOUND
 from .errors import CachingError

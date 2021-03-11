@@ -1,8 +1,9 @@
 import re
 from types import MethodType, FunctionType
-from typing import Union, Optional, Callable, Any
+from typing import Union
 
 from .cache_factory import CacheFactory
+from ..caches.cache import Cache
 from ..caches.postgresql_cache import PostgresqlCache
 from ..postgresql_key_value_adapter import (
     PostgresqlKeyValueAdapter,
@@ -12,16 +13,10 @@ from ..postgresql_key_value_adapter import (
 
 class PostgresqlCacheFactory(CacheFactory):
     def __init__(
-        self,
-        connection_pool: ConnectionPool,
-        serializer: Optional[Callable[[Any], str]] = None,
-        deserializer: Optional[Callable[[Optional[str]], Any]] = None,
-        index_table: str = "_index",
+        self, connection_pool: ConnectionPool, index_table: str = "_index",
     ) -> None:
         super().__init__()
         self.connection_pool = connection_pool
-        self.serializer = serializer
-        self.deserializer = deserializer
         self.index_table = index_table
         self._pkv_adapter = None
 
@@ -33,14 +28,9 @@ class PostgresqlCacheFactory(CacheFactory):
             )
         return self._pkv_adapter
 
-    def create(self, func: Union[MethodType, FunctionType]) -> PostgresqlCache:
+    def create(self, func: Union[MethodType, FunctionType]) -> Cache:
         table = self._normalize_table_name(self._func_to_key(func))
-        return PostgresqlCache(
-            connection_pool=self.connection_pool,
-            table=table,
-            serializer=self.serializer,
-            deserializer=self.deserializer,
-        )
+        return PostgresqlCache(connection_pool=self.connection_pool, table=table)
 
     def _normalize_table_name(self, table_name: str) -> str:
         table_name = table_name.lower()

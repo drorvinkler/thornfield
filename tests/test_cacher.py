@@ -312,7 +312,7 @@ class TestCacher(TestCase):
                     return NOT_FOUND
                 return data[key]
 
-            def set(self, key, value, _):
+            def set(self, key, value, expiration):
                 data[key] = value
 
         @self.cacher.cached(CustomCache())

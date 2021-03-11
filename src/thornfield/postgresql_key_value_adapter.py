@@ -1,5 +1,5 @@
 from enum import Enum, auto
-from typing import Callable, Optional, List, Union
+from typing import Callable, Optional, List, Union, AnyStr
 
 try:
     from psycopg2.pool import AbstractConnectionPool
@@ -72,42 +72,54 @@ class PostgresqlKeyValueAdapter:
         self._key_col = key_col
         self._value_col = value_col
         self._ts_col = ts_col
+        with self._pool.getconn() as connection:
+            self._table_exists = self._exists(
+                connection, "information_schema.tables", "table_name", self._table
+            )
 
-        self._create_table_if_not_exists()
-
-    def set(self, key: str, value: str, ts: Optional[int] = None):
+    def set(self, key: str, value: AnyStr, ts: Optional[int] = None):
         if self._ts_col:
             assert ts is not None
+        if not self._table_exists:
+            self._create_table_if_not_exists(isinstance(value, bytes))
+            self._table_exists = True
         with self._pool.getconn() as connection:
             if self._exists(connection, self._table, self._key_col, key):
                 self._update(connection, key, value, ts)
             else:
                 self._add(connection, key, value, ts)
 
-    def get(self, key: str, max_ts: Optional[int] = None) -> Optional[str]:
+    def get(self, key: str, min_ts: Optional[int] = None) -> Optional[AnyStr]:
+        if not self._table_exists:
+            return None
+
         query = f"select {self._value_col} from {self._table} where {self._key_col}=%s"
-        if max_ts is not None:
+        if min_ts is not None:
             assert self._ts_col
-            query += f" and {self._ts_col}<{max_ts}"
+            query += f" and ({self._ts_col}>{min_ts} or {self._ts_col}=0)"
         with self._pool.getconn() as connection:
             result = connection.execute_query(query, FetchAmount.ONE, key)
         return result[0] if result else None
 
     def keys(self) -> List[str]:
+        if not self._table_exists:
+            return []
+
         with self._pool.getconn() as connection:
             result = connection.execute_query(
                 f"select {self._key_col} from {self._table}", FetchAmount.ALL
             )
         return [t[0] for t in result]
 
-    def _create_table_if_not_exists(self):
+    def _create_table_if_not_exists(self, binary: bool):
         with self._pool.getconn() as connection:
             exists = self._exists(
                 connection, "information_schema.tables", "table_name", self._table
             )
             if exists:
                 return
-            structure = f"id serial primary key, {self._key_col} text unique, {self._value_col} text"
+            value_col_type = "bytes" if binary else "text"
+            structure = f"id serial primary key, {self._key_col} text unique, {self._value_col} {value_col_type}"
             if self._ts_col:
                 structure += f", {self._ts_col} bigint"
             connection.execute_query(

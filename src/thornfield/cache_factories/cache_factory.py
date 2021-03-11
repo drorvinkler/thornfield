@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from types import MethodType, FunctionType
 from typing import Union
 
-from thornfield.caches.cache import Cache
+from ..caches.cache import Cache
 
 
 class CacheFactory(ABC):
