@@ -5,7 +5,7 @@ from thornfield.cacher import Cacher
 from thornfield.caches.memory_cache import MemoryCache
 
 
-class TestMemoryDAL(TestCase):
+class TestMemoryCache(TestCase):
     def test_basic(self):
         cacher = Cacher(self._create_cache)
 

@@ -13,12 +13,12 @@ except ImportError:
 class CacheSerializationDecorator(Cache):
     def __init__(
         self,
-        dal: Cache,
+        cache: Cache,
         serializer: Optional[Callable[[Any], str]] = ...,
         deserializer: Optional[Callable[[Optional[str]], Any]] = ...,
     ) -> None:
         super().__init__()
-        self._dal = dal
+        self._cache = cache
         if serializer is None:
             self._serialize = self._noop
         elif serializer is ...:
@@ -42,11 +42,11 @@ class CacheSerializationDecorator(Cache):
             self._deserialize = deserializer
 
     def get(self, key):
-        value = self._dal.get(self._serialize(key))
+        value = self._cache.get(self._serialize(key))
         return self._deserialize(value)
 
     def set(self, key, value, expiration: int) -> None:
-        self._dal.set(self._serialize(key), self._serialize(value), expiration)
+        self._cache.set(self._serialize(key), self._serialize(value), expiration)
 
     @staticmethod
     def _noop(x):

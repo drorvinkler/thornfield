@@ -7,12 +7,12 @@ from .cache import Cache
 class CacheCompressionDecorator(Cache):
     def __init__(
         self,
-        dal: Cache,
+        cache: Cache,
         compress: Optional[Callable[[str], AnyStr]] = ...,
         decompress: Optional[Callable[[AnyStr], str]] = ...,
     ) -> None:
         super().__init__()
-        self._dal = dal
+        self._cache = cache
         if compress is None:
             self._compress = self._noop
         elif compress is ...:
@@ -28,10 +28,10 @@ class CacheCompressionDecorator(Cache):
             self._decompress = decompress
 
     def get(self, key):
-        return self._decompress(self._dal.get(key))
+        return self._decompress(self._cache.get(key))
 
     def set(self, key, value, expiration: int) -> None:
-        self._dal.set(key, self._compress(value), expiration)
+        self._cache.set(key, self._compress(value), expiration)
 
     @staticmethod
     def _noop(x):
