@@ -2,6 +2,7 @@ from typing import Callable, AnyStr, Optional
 from zlib import compress as default_compress, decompress as default_decompress
 
 from .cache import Cache
+from ..constants import NOT_FOUND
 
 
 class CacheCompressionDecorator(Cache):
@@ -28,7 +29,8 @@ class CacheCompressionDecorator(Cache):
             self._decompress = decompress
 
     def get(self, key):
-        return self._decompress(self._cache.get(key))
+        value = self._cache.get(key)
+        return value if value is NOT_FOUND else self._decompress(value)
 
     def set(self, key, value, expiration: int) -> None:
         self._cache.set(key, self._compress(value), expiration)

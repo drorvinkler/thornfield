@@ -7,6 +7,7 @@ from tests.utils import mock_import
 from thornfield.caches import cache_serialization_decorator
 from thornfield.caches.cache import Cache
 from thornfield.caches.cache_serialization_decorator import CacheSerializationDecorator
+from thornfield.constants import NOT_FOUND
 from thornfield.errors import CachingError
 
 
@@ -53,3 +54,12 @@ class TestCacheSerializationDecorator(TestCase):
         result = decorator.get(1)
         self._cache.get.assert_called_once_with(1)
         self.assertEqual(self._cache.get.return_value, result)
+
+    def test_not_found(self):
+        serialize = MagicMock()
+        deserialize = MagicMock()
+        self._cache.get = MagicMock(return_value=NOT_FOUND)
+
+        result = CacheSerializationDecorator(self._cache, serializer=serialize, deserializer=deserialize).get(1)
+        deserialize.assert_not_called()
+        self.assertIs(NOT_FOUND, result)

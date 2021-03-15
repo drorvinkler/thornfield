@@ -1,6 +1,6 @@
 Changelog
 =========
-1.4.0 (2021-03-12)
+1.5.0 (2021-03-15)
 ___________________
 - Refactored serialization out of the cache into a decorator
 - Added a compression decorator

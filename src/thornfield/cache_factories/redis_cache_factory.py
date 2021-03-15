@@ -1,5 +1,5 @@
 from types import MethodType, FunctionType
-from typing import Union, Optional
+from typing import Union, Optional, Callable
 
 from redis import Redis
 
@@ -10,15 +10,19 @@ from ..caches.redis_cache import RedisCache
 
 class RedisCacheFactory(CacheFactory):
     def __init__(
-        self, host: str = "localhost", port: int = 6379, password: Optional[str] = None,
+        self,
+        host: str = "localhost",
+        port: int = 6379,
+        password: Optional[str] = None,
+        decorator: Optional[Callable[[Cache], Cache]] = None,
     ) -> None:
-        super().__init__()
+        super().__init__(decorator)
         self.host = host
         self.port = port
         self.password = password
         self._index = Redis(host, port, db=0, password=password)
 
-    def create(self, func: Union[MethodType, FunctionType]) -> Cache:
+    def _create(self, func: Union[MethodType, FunctionType]) -> RedisCache:
         key = self._func_to_key(func)
         db = self._index.get(key)
         if db is None:

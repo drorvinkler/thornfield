@@ -3,6 +3,7 @@ from unittest.mock import create_autospec, MagicMock
 
 from thornfield.caches.cache import Cache
 from thornfield.caches.cache_compression_decorator import CacheCompressionDecorator
+from thornfield.constants import NOT_FOUND
 
 
 class TestCacheCompressionDecorator(TestCase):
@@ -34,3 +35,11 @@ class TestCacheCompressionDecorator(TestCase):
 
         result = decorator.get(1)
         self.assertEqual(self._cache.get.return_value, result)
+
+    def test_not_found(self):
+        self._cache.get = MagicMock(return_value=NOT_FOUND)
+        decompress = MagicMock()
+
+        result = CacheCompressionDecorator(self._cache, decompress=decompress).get(1)
+        decompress.assert_not_called()
+        self.assertIs(NOT_FOUND, result)

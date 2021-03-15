@@ -2,6 +2,7 @@ import json
 from typing import Optional, Callable, Any
 
 from .cache import Cache
+from ..constants import NOT_FOUND
 from ..errors import CachingError
 
 try:
@@ -19,13 +20,14 @@ class CacheSerializationDecorator(Cache):
     ) -> None:
         super().__init__()
         self._cache = cache
+
+        if (serializer is ... or deserializer is ...) and serialize is None:
+            raise CachingError(
+                'Package "yasoo" is not installed and no de/serializer passed'
+            )
         if serializer is None:
             self._serialize = self._noop
         elif serializer is ...:
-            if serialize is None:
-                raise CachingError(
-                    'Package "yasoo" is not installed and no serializer passed'
-                )
             self._serialize = self._default_serialize
         else:
             self._serialize = serializer
@@ -33,17 +35,13 @@ class CacheSerializationDecorator(Cache):
         if deserializer is None:
             self._deserialize = self._noop
         elif deserializer is ...:
-            if deserialize is None:
-                raise CachingError(
-                    'Package "yasoo" is not installed and no deserializer passed'
-                )
             self._deserialize = self._default_deserialize
         else:
             self._deserialize = deserializer
 
     def get(self, key):
         value = self._cache.get(self._serialize(key))
-        return self._deserialize(value)
+        return value if value is NOT_FOUND else self._deserialize(value)
 
     def set(self, key, value, expiration: int) -> None:
         self._cache.set(self._serialize(key), self._serialize(value), expiration)

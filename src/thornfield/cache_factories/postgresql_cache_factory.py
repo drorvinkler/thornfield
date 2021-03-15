@@ -1,6 +1,6 @@
 import re
 from types import MethodType, FunctionType
-from typing import Union
+from typing import Union, Optional, Callable
 
 from .cache_factory import CacheFactory
 from ..caches.cache import Cache
@@ -13,9 +13,12 @@ from ..postgresql_key_value_adapter import (
 
 class PostgresqlCacheFactory(CacheFactory):
     def __init__(
-        self, connection_pool: ConnectionPool, index_table: str = "_index",
+        self,
+        connection_pool: ConnectionPool,
+        index_table: str = "_index",
+        decorator: Optional[Callable[[Cache], Cache]] = None,
     ) -> None:
-        super().__init__()
+        super().__init__(decorator)
         self.connection_pool = connection_pool
         self.index_table = index_table
         self._pkv_adapter = None
@@ -28,7 +31,7 @@ class PostgresqlCacheFactory(CacheFactory):
             )
         return self._pkv_adapter
 
-    def create(self, func: Union[MethodType, FunctionType]) -> Cache:
+    def _create(self, func: Union[MethodType, FunctionType]) -> PostgresqlCache:
         table = self._normalize_table_name(self._func_to_key(func))
         return PostgresqlCache(connection_pool=self.connection_pool, table=table)
 
