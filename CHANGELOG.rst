@@ -1,5 +1,9 @@
 Changelog
 =========
+1.5.1 (2021-04-15)
+___________________
+- Not crashing if the cache throws an exception
+
 1.5.0 (2021-03-15)
 ___________________
 - Refactored serialization out of the cache into a decorator

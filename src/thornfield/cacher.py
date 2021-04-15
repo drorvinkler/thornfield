@@ -1,3 +1,4 @@
+import logging
 from functools import partial, wraps
 from inspect import getsource, iscoroutinefunction, getfullargspec
 from types import MethodType
@@ -11,6 +12,7 @@ from .typing import NotCached, Cached, NormalCallable
 
 _CACHE_ATTR = "cache"
 _CACHING_DATA_ATTR = "caching_data"
+_logger = logging.getLogger("thornfield.cacher")
 
 
 class Cacher:
@@ -137,11 +139,19 @@ class Cacher:
             if func_cache is None:
                 func_cache = cache or self._cache_impl(func_passed_to_cache or func)
                 setattr(func, _CACHE_ATTR, func_cache)
-            result = func_cache.get(key)
+            try:
+                result = func_cache.get(key)
+            except CachingError as e:
+                result = NOT_FOUND
+                _logger.exception("Error getting value from cache", exc_info=e)
+
             if result is NOT_FOUND:
                 result = func(*args, **kwargs)
                 if validator is None or validator(result):
-                    func_cache.set(key, result, expiration)
+                    try:
+                        func_cache.set(key, result, expiration)
+                    except CachingError as e:
+                        _logger.exception("Error setting value to cache", exc_info=e)
             return result
 
         source = self._get_inner_code(getsource(_x), func)

@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import logging
 from unittest import TestCase
 from unittest.mock import create_autospec, MagicMock
 
@@ -435,7 +436,7 @@ class TestCacher(TestCase):
         foo.bar(1)
         self.assertEqual(Foo.bar.__wrapped__, create_cache.func)
 
-    def test_cache_method_use_base_method(self):
+    def test_cache_method_uses_base_method(self):
         def create_cache(func):
             create_cache.func = func
             cache = create_autospec(Cache)
@@ -471,6 +472,28 @@ class TestCacher(TestCase):
         foo = Foo2()
         foo.bar(1)
         self.assertEqual(Foo2.bar, create_cache.func)
+
+    def test_caching_decorator_handles_exceptions(self):
+        class ErroneousCache(Cache):
+            def get(self, key):
+                raise CachingError('get')
+
+            def set(self, key, value, expiration: int) -> None:
+                raise CachingError('set')
+
+        cacher = Cacher(lambda _: ErroneousCache())
+
+        @cacher.cached
+        def bar(x):
+            return x
+
+        with self.assertLogs(logging.getLogger('thornfield.cacher'), logging.ERROR) as logs:
+            self.assertEqual(1, bar(1))
+            self.assertEqual(2, len(logs.records))
+            self.assertIsInstance(logs.records[0].exc_info[1], CachingError)
+            self.assertEqual(('get',), logs.records[0].exc_info[1].args)
+            self.assertIsInstance(logs.records[1].exc_info[1], CachingError)
+            self.assertEqual(('set',), logs.records[1].exc_info[1].args)
 
     @classmethod
     def _create_cacher(cls, cache: dict):
