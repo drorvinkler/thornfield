@@ -6,14 +6,14 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 ## Installation
-```pip install thornfield```
+`pip install thornfield`
 
 ## Usage
 Choose the cache storage you want to use - in-memory, redis and postgresql are currently implemented.
 You can use a different storage by implementing the `Cache` interface.
 
 Then, use the `cached` decorator to annotate the function being cached:
-```
+```python
 cacher = Cacher(cache_factory_func)
 
 @cacher.cached
@@ -30,7 +30,7 @@ The decorator supports:
 #### Caching only some parameters
 In case you don't want to use all the parameters of the function as cache key,
 you can the `Cached` or `NotCached` types:
-```
+```python
 from thornfield.typing import Cached, NotCached
 
 @cached
@@ -46,7 +46,7 @@ async def request_async(url: Cached[str], timeout: int, callback):
 #### Caching abstract methods
 In order to avoid adding the same decorator to all implementations of an
 abstract method, you can use `cache_method` as follows:
-```
+```python
 class Base(ABC):
     def __init__(self):
         cacher.cache_method(do_something)
